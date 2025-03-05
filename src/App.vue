@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { z } from 'zod'
-import AutoForm from './components/AutoForm.vue'
+import AutoForm from './components/AutoForm/AutoForm.vue'
+import AutoFormField from './components/AutoForm/AutoFormField.vue'
 
 enum Sports {
   Football = 'Football/Soccer',
@@ -11,6 +12,17 @@ enum Sports {
 }
 
 const schema = z.object({
+  guestListName: z.string(),
+  invitedGuests: z
+    .array(
+      z.object({
+        name: z.string().min(3),
+        age: z.coerce.number().min(18).max(110),
+      }),
+    )
+    .min(3)
+    .describe('Guests invited to the party'),
+
   username: z
     .string({
       required_error: 'Username is required.',
@@ -71,6 +83,23 @@ const schema = z.object({
   file: z.string({
     required_error: 'Username is required.',
   }),
+
+  subObject: z.object({
+    subField: z.string().optional().default('Sub Field Йоу'),
+    numberField: z.number().optional().default(1),
+
+    subSubObject: z
+      .object({
+        subSubField: z.string().min(3).default('Sub Sub Field'),
+      })
+      .describe('Sub Sub Object Description'),
+  }),
+  optionalSubObject: z
+    .object({
+      optionalSubField: z.string().min(2),
+      otherOptionalSubField: z.string(),
+    })
+    .optional(),
 })
 
 const fieldConfig = {
@@ -121,6 +150,44 @@ const fieldConfig = {
 
 <template>
   <van-config-provider theme="dark">
-    <AutoForm :zod-schema="schema" :field-config="fieldConfig" />
+    <AutoForm :zod-schema="schema" :field-config="fieldConfig">
+      <template #acceptTerms="slotProps">
+        <AutoFormField v-bind="slotProps" />
+        <div class="terms">
+          I agree to the
+          <a href="https://google.com" target="_blank">terms and conditions</a>.
+        </div>
+      </template>
+
+      <template #customParent="slotProps">
+        <div class="custom-parent flex items-end">
+          <AutoFormField v-bind="slotProps" />
+          <van-button type="primary"> Check </van-button>
+        </div>
+      </template>
+
+      <template #invitedGuests.name="slotProps">
+        Hello Йоу
+        <AutoFormField v-bind="slotProps" />
+      </template>
+
+      <template #subObject.subSubObject.subSubField="slotProps">
+        Hello from subsubsub field
+        <AutoFormField v-bind="slotProps" />
+      </template>
+    </AutoForm>
   </van-config-provider>
 </template>
+
+<style scoped>
+.terms {
+  margin-top: var(--van-padding-xs);
+  padding: 0 var(--van-cell-horizontal-padding);
+}
+
+.custom-parent {
+  display: flex;
+  align-items: flex-end;
+  padding-right: var(--van-cell-horizontal-padding);
+}
+</style>

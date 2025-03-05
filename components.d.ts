@@ -8,8 +8,10 @@ export {}
 /* prettier-ignore */
 declare module 'vue' {
   export interface GlobalComponents {
-    AutoForm: typeof import('./src/components/AutoForm.vue')['default']
-    AutoFormField: typeof import('./src/components/AutoFormField.vue')['default']
+    AutoForm: typeof import('./src/components/AutoForm/AutoForm.vue')['default']
+    AutoFormArray: typeof import('./src/components/AutoForm/AutoFormArray.vue')['default']
+    AutoFormField: typeof import('./src/components/AutoForm/AutoFormField.vue')['default']
+    AutoFormObject: typeof import('./src/components/AutoForm/AutoFormObject.vue')['default']
     ErrorMessage: typeof import('./src/components/ErrorMessage.vue')['default']
     HelloWorld: typeof import('./src/components/HelloWorld.vue')['default']
     IconCommunity: typeof import('./src/components/icons/IconCommunity.vue')['default']
@@ -23,6 +25,8 @@ declare module 'vue' {
     VanCellGroup: typeof import('vant/es')['CellGroup']
     VanCheckbox: typeof import('vant/es')['Checkbox']
     VanCheckboxGroup: typeof import('vant/es')['CheckboxGroup']
+    VanCollapse: typeof import('vant/es')['Collapse']
+    VanCollapseItem: typeof import('vant/es')['CollapseItem']
     VanConfigProvider: typeof import('vant/es')['ConfigProvider']
     VanDatePicker: typeof import('vant/es')['DatePicker']
     VanField: typeof import('vant/es')['Field']
