@@ -2,6 +2,7 @@
 import { z } from 'zod'
 import AutoForm from './components/AutoForm/AutoForm.vue'
 import AutoFormField from './components/AutoForm/AutoFormField.vue'
+import { DependencyType } from './components/AutoForm/constants'
 
 enum Sports {
   Football = 'Football/Soccer',
@@ -11,7 +12,7 @@ enum Sports {
   None = "I don't like sports",
 }
 
-const schema = z.object({
+const schema1 = z.object({
   guestListName: z.string(),
   invitedGuests: z
     .array(
@@ -134,8 +135,7 @@ const fieldConfig = {
     },
   },
 
-  marshmallows: {
-    label: 'How many marshmallows fit in your mouth?',
+  mealOptions: {
     component: 'radio',
   },
 
@@ -146,11 +146,42 @@ const fieldConfig = {
     },
   },
 }
+
+const schema = z.object({
+  age: z.number(),
+  parentsAllowed: z.boolean().optional(),
+  vegetarian: z.boolean().optional(),
+  mealOptions: z.enum(['Pasta', 'Salad', 'Beef Wellington']).optional(),
+})
 </script>
 
 <template>
   <van-config-provider theme="dark">
-    <AutoForm :zod-schema="schema" :field-config="fieldConfig">
+    <AutoForm
+      :zod-schema="schema"
+      :field-config="fieldConfig"
+      :dependencies="[
+        {
+          sourceField: 'age',
+          type: DependencyType.HIDES,
+          targetField: 'parentsAllowed',
+          when: (age) => age >= 18,
+        },
+        {
+          sourceField: 'age',
+          type: DependencyType.REQUIRES,
+          targetField: 'parentsAllowed',
+          when: (age) => age < 18,
+        },
+        {
+          sourceField: 'vegetarian',
+          type: DependencyType.SETS_OPTIONS,
+          targetField: 'mealOptions',
+          when: (vegetarian) => vegetarian,
+          options: ['Pasta', 'Salad'],
+        },
+      ]"
+    >
       <template #acceptTerms="slotProps">
         <AutoFormField v-bind="slotProps" />
         <div class="terms">

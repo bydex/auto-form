@@ -29,16 +29,20 @@ if (!injected.errors || !injected.fieldConfig || !injected.formSchema) {
   throw new Error('There is no required params')
 }
 
-const { errors, fieldConfig, formSchema } = injected
+const { errors, fieldConfig, formSchema, isTouched } = injected
 
 const errorMessage = computed(() => {
   const fieldPath = path.value || fieldId.value
 
-  return (
-    errors.value?.find((error) => {
-      return error.path.join('.') === fieldPath
-    })?.message ?? null
-  )
+  const error = errors.value?.find((error) => {
+    return error.path.join('.') === fieldPath
+  })?.message
+
+  if (error) return error
+
+  if (isRequired.value && isTouched.value && !modelValue.value) return 'Required'
+
+  return null
 })
 
 const isRequired = computed(() => {
@@ -199,7 +203,8 @@ const inputProps = computed(() => currentFieldConfig.value?.inputProps ?? {})
   />
   <template v-else-if="currentSchemaProperty.type === 'number'">
     <van-field
-      v-model="modelValue"
+      :model-value="modelValue"
+      @update:model-value="(value) => (modelValue = parseFloat(value))"
       :label="fieldLabel"
       type="number"
       :error-message="errorMessage"

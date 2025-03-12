@@ -4,6 +4,9 @@ import zodToJsonSchema from 'zod-to-json-schema'
 import AutoFormField from '@/components/AutoForm/AutoFormField.vue'
 import { autoFormInjectionKey } from '@/utils/helpers/keys'
 import { getDefaultPropertiesState } from './helpers'
+import { deepFind } from '@/utils/helpers/deep-find'
+import { DependencyType } from './constants'
+import z from 'zod'
 
 const props = defineProps({
   zodSchema: {
@@ -14,11 +17,84 @@ const props = defineProps({
     type: Object,
     default: () => {},
   },
+  dependencies: {
+    type: Array,
+    default: () => [],
+  },
 })
-const { zodSchema, fieldConfig } = toRefs(props)
+const { zodSchema, fieldConfig, dependencies } = toRefs(props)
+
+const computeDependencies = computed(() => {
+  return dependencies.value.map((dependency) => {
+    return {
+      sourceValue: deepFind(formState.value, dependency.sourceField),
+      targetValue: deepFind(formState.value, dependency.targetField),
+      ...dependency,
+    }
+  })
+})
+
+const fieldsToHide = computed(() => {
+  const obj = {}
+
+  computeDependencies.value
+    .filter((dependency) => {
+      if (dependency.type === DependencyType.HIDES) {
+        return dependency.when(dependency.sourceValue, dependency.targetValue)
+      }
+
+      return false
+    })
+    .forEach((dep) => {
+      obj[dep.targetField] = true
+    })
+
+  return obj
+})
+const fieldsToRequire = computed(() => {
+  const obj = {}
+
+  computeDependencies.value
+    .filter((dependency) => {
+      if (dependency.type === DependencyType.REQUIRES) {
+        return dependency.when(dependency.sourceValue, dependency.targetValue)
+      }
+
+      return false
+    })
+    .forEach((dep) => {
+      obj[dep.targetField] = true
+    })
+
+  return obj
+})
+const fieldsToSetOptions = computed(() => {
+  const obj = {}
+
+  computeDependencies.value
+    .filter((dependency) => {
+      if (dependency.type === DependencyType.SETS_OPTIONS) {
+        return dependency.when(dependency.sourceValue, dependency.targetValue)
+      }
+
+      return false
+    })
+    .forEach((dependency) => {
+      obj[dep.targetField] = z.enum(dependency.options)
+    })
+
+  return obj
+})
+
+const modifiedZodSchema = computed(() => {
+  return zodSchema.value
+    .omit(fieldsToHide.value)
+    .required(fieldsToRequire.value)
+    .extend(fieldsToSetOptions.value)
+})
 
 const formSchema = computed(() => {
-  return zodToJsonSchema(zodSchema.value, 'formSchema')
+  return zodToJsonSchema(modifiedZodSchema.value, 'formSchema')
 })
 
 const formState = ref({})
@@ -30,13 +106,14 @@ watch(
   },
   {
     immediate: true,
+    once: true,
   },
 )
 
 const errors = computed(() => {
   if (!isTouched.value) return []
 
-  const result = zodSchema.value.safeParse(formState.value)
+  const result = modifiedZodSchema.value.safeParse(formState.value)
 
   if (result.success) return []
   else return result.error.errors
@@ -46,12 +123,19 @@ const isTouched = ref(false)
 
 const submit = () => {
   isTouched.value = true
+
+  if (errors.value.length) return
+
+  const result = modifiedZodSchema.value.parse(formState.value)
+
+  console.log(result)
 }
 
 provide(autoFormInjectionKey, {
   errors: errors,
   fieldConfig: readonly(fieldConfig),
   formSchema: computed(() => formSchema.value?.definitions?.formSchema),
+  isTouched: readonly(isTouched),
 })
 </script>
 
@@ -59,6 +143,8 @@ provide(autoFormInjectionKey, {
   <pre>
     {{ formState }}
   </pre>
+  <pre>{{ fieldsToHide }}</pre>
+  <pre>{{ fieldsToRequire }}</pre>
   <van-form
     v-if="
       formSchema.definitions?.formSchema?.type === 'object' &&
